@@ -82,14 +82,6 @@ CREATES = {
             subject_prefix TEXT,
             PRIMARY KEY (name)
         );""", """
-        CREATE TABLE "thread" (
-            list_name VARCHAR(255) NOT NULL,
-            thread_id VARCHAR(255) NOT NULL,
-            date_active TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-            category_id INTEGER,
-            PRIMARY KEY (list_name, thread_id),
-            FOREIGN KEY (category_id) REFERENCES category(id)
-        );""", """
         CREATE TABLE "category" (
             id INTEGER NOT NULL,
             name VARCHAR(255) NOT NULL,
@@ -101,7 +93,15 @@ CREATES = {
             NO MAXVALUE
             NO MINVALUE
             CACHE 1
-        ;""",
+        ;""","""
+        CREATE TABLE "thread" (
+            list_name VARCHAR(255) NOT NULL,
+            thread_id VARCHAR(255) NOT NULL,
+            date_active TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+            category_id INTEGER,
+            PRIMARY KEY (list_name, thread_id),
+            FOREIGN KEY (category_id) REFERENCES category(id)
+        );""",
         "ALTER SEQUENCE category_id_seq OWNED BY category.id;",
         "ALTER TABLE ONLY category ALTER COLUMN id SET DEFAULT nextval('category_id_seq'::regclass);",
         """
