@@ -61,6 +61,8 @@ def parseaddr(address):
     Wrapper around email.utils.parseaddr to also handle Mailman's generated
     mbox archives.
     """
+    if not address:
+        return u"", u""
     address = address.replace(" at ", "@")
     from_name, from_email = email.utils.parseaddr(address)
     if not from_name:
@@ -75,12 +77,12 @@ def header_to_unicode(header):
     h_decoded = []
     for text, charset in decode_header(header):
         if charset is None:
-            h_decoded.append(unicode(text))
+            h_decoded.append(text.decode("ascii", "replace"))
         else:
             try:
                 h_decoded.append(text.decode(charset))
-            except LookupError:
-                # Unknown encoding
+            except (LookupError, UnicodeDecodeError):
+                # Unknown or broken encoding
                 h_decoded.append(text.decode("ascii", "replace"))
     return u" ".join(h_decoded)
 

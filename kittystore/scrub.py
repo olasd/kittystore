@@ -210,10 +210,15 @@ class Scrubber(object):
                         t += '\n'
                     text.append(t)
 
-            text = "\n".join(text)
+            text = u"\n".join(text)
         else:
             text = self.msg.get_payload(decode=True)
-            text = text.decode(get_charset(self.msg, guess=True), "replace")
+            encoding = get_charset(self.msg, guess=True)
+            try:
+                text = text.decode(encoding, "replace")
+            except LookupError:
+                print "Python doesn't understand this encoding: {0}".format(encoding)
+                text = text.decode("ascii", "replace")
 
             next_part_match = NEXT_PART.search(text)
             if next_part_match:
@@ -233,10 +238,12 @@ class Scrubber(object):
         charset = get_charset(part, default=None, guess=False)
         # i18n file name is encoded
         try:
-            filename = oneline(part.get_filename(''), in_unicode=True)
+            filename = oneline(part.get_filename(u''), in_unicode=True)
         except TypeError:
             # Workaround for https://bugs.launchpad.net/mailman/+bug/1060951
             # (accented filenames)
+            filename = "attachment.bin"
+        except UnicodeDecodeError:
             filename = "attachment.bin"
         filename, fnext = os.path.splitext(filename)
         # For safety, we should confirm this is valid ext for content-type
