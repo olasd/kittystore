@@ -129,6 +129,8 @@ class DbImporter(object):
                 subject_prefix = PREFIX_RE.search(message["subject"])
                 if subject_prefix:
                     self.mlist.display_name = unicode(subject_prefix.group(1))
+                else:
+                    self.mlist.display_name = u''
             if self.force_import:
                 while self.store.is_message_in_list(
                             self.mlist.fqdn_listname,
