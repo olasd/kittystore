@@ -82,6 +82,16 @@ class TestScrubber(unittest.TestCase):
                 u"This is a test message\r\n"
                 u"Non-ASCII chars: r\xe9ponse fran\xe7ais \n")
 
+    def test_html_only_email(self):
+        # This email only has an HTML part, thus the scrubbed content will be
+        # empty. It should be an unicode empty string, not str.
+        with open(get_test_file("html-email-2.txt")) as email_file:
+            msg = email.message_from_file(email_file, _class=Message)
+        scrubber = Scrubber("testlist@example.com", msg)
+        contents, attachments = scrubber.scrub()
+        self.assertTrue(isinstance(contents, unicode),
+            u"Scrubbed content should always be unicode")
+
     def test_non_ascii_payload(self):
         """Scrubber must handle non-ascii messages"""
         for enc in ["utf8", "iso8859"]:
@@ -92,6 +102,19 @@ class TestScrubber(unittest.TestCase):
             self.assertTrue(isinstance(contents, unicode))
             self.assertEqual(contents, u'This message contains non-ascii '
                     u'characters:\n\xe9 \xe8 \xe7 \xe0 \xee \xef \xeb \u20ac\n')
+
+    def test_bad_content_type(self):
+        """Scrubber must handle unknown content-types"""
+        with open(get_test_file("payload-unknown.txt")) as email_file:
+            msg = email.message_from_file(email_file, _class=Message)
+        scrubber = Scrubber("testlist@example.com", msg)
+        try:
+            contents, attachments = scrubber.scrub()
+        except LookupError, e:
+            import traceback;
+            print traceback.format_exc()
+            self.fail(e) # codec not found
+        self.assertTrue(isinstance(contents, unicode))
 
     def test_attachment_4(self):
         with open(get_test_file("attachment-4.txt")) as email_file:

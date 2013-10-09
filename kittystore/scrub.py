@@ -201,7 +201,7 @@ class Scrubber(object):
                     t = unicode(t, partcharset, 'replace')
                 except (UnicodeError, LookupError, ValueError,
                         AssertionError):
-                    # We can get here if partcharset is bogus in come way.
+                    # We can get here if partcharset is bogus in some way.
                     # Replace funny characters.  We use errors='replace'
                     t = unicode(t, 'ascii', 'replace')
                 # Separation is useful
@@ -213,12 +213,11 @@ class Scrubber(object):
             text = u"\n".join(text)
         else:
             text = self.msg.get_payload(decode=True)
-            encoding = get_charset(self.msg, guess=True)
+            charset = get_charset(self.msg, guess=True)
             try:
-                text = text.decode(encoding, "replace")
-            except LookupError:
-                print "Python doesn't understand this encoding: {0}".format(encoding)
-                text = text.decode("ascii", "replace")
+                text = text.decode(charset, "replace")
+            except (UnicodeError, LookupError, ValueError, AssertionError):
+                text = unicode(text, 'ascii', 'replace')
 
             next_part_match = NEXT_PART.search(text)
             if next_part_match:

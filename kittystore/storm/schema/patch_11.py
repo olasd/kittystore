@@ -7,20 +7,21 @@ from . import get_db_type
 
 SQL = {
     "sqlite": [
-        'CREATE INDEX "ix_sender_email" ON "email" (sender_email);',
+        'CREATE INDEX "ix_thread_list_name" ON "thread" (list_name);',
         ],
     "postgres": [
-        'CREATE INDEX "ix_sender_email" ON "email" (sender_email);',
+        'CREATE INDEX "ix_thread_list_name" ON "thread" (list_name);',
         ],
     "mysql": [
-        'CREATE INDEX `ix_sender_email` ON `email` (sender_email);',
+        'CREATE INDEX `ix_thread_list_name` ON `thread` (list_name);',
         ],
     }
 
 
 def apply(store):
-    """Add indexes on email.sender_email"""
+    """Add indexes on thread.list_name"""
     dbtype = get_db_type(store)
     for statement in SQL[dbtype]:
         store.execute(statement)
     store.commit()
+

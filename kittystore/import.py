@@ -74,12 +74,10 @@ U(?:rl|RL)[ ]?:[ ]([^\s]+)\s*\n
 TEXTWRAP_RE = re.compile("\n\s*")
 
 
-def convert_date(date_string):
-    """ Convert the string of the date to a datetime object. """
-    #print date_string
-    date_string = date_string.split('(')[0].strip()
-    dt = parse(date_string)
-    return dt.astimezone(tz.tzutc())
+def awarify(date):
+    if date.tzinfo is None or date.tzinfo.utcoffset(date) is None:
+        return date.replace(tzinfo=tz.tzutc())
+    return date
 
 
 class DummyMailingList(object):
@@ -106,6 +104,13 @@ class DbImporter(object):
         self.force_import = opts.duplicates
         self.no_download = opts.no_download
         self.verbose = opts.verbose
+        self.since = opts.since
+        if opts.cont:
+            self.since = store.get_last_date(self.mlist.fqdn_listname)
+        if self.since is not None:
+            self.since = awarify(self.since)
+            if self.verbose:
+                print "Only emails after %s will be imported" % self.since
 
     def from_mbox(self, mbfile):
         """ Upload all the emails in a mbox file into the database using
@@ -118,8 +123,22 @@ class DbImporter(object):
         cnt_imported = 0
         cnt_read = 0
         for message in mailbox.mbox(mbfile):
+            if self.since:
+                date = message["date"]
+                if date:
+                    try:
+                        date = awarify(parse(date))
+                    except ValueError, e:
+                        print "Can't parse date string in message %s: %s" \
+                              % (message["message-id"], date)
+                        print e
+                        continue
+                    if date < self.since:
+                        continue
             cnt_read = cnt_read + 1
             self.total_imported += 1
+            if self.verbose:
+                print "%s (%d)" % (message["Message-Id"], self.total_imported)
             # Un-wrap the subject line if necessary
             if message["subject"]:
                 message.replace_header("subject",
@@ -166,6 +185,10 @@ class DbImporter(object):
 
             self.store.flush()
             cnt_imported += 1
+            if cnt_imported % 1000:
+                # commit once in a while to avoid loosing everything on an
+                # interrupt or a crash
+                self.store.commit()
         self.store.commit()
         if self.verbose:
             print '  %s email read' % cnt_read
@@ -230,6 +253,9 @@ def parse_args():
                       help="the Python path to a Django settings module")
     parser.add_option("-p", "--pythonpath",
                       help="a directory to add to the Python path")
+    parser.add_option("-c", "--continue", action="store_true", dest="cont",
+                      help="only import newer emails")
+    parser.add_option("--since", help="only import emails after this date")
     parser.add_option("-v", "--verbose", action="store_true",
             help="show more output")
     parser.add_option("-d", "--debug", action="store_true",
@@ -250,6 +276,11 @@ def parse_args():
     for mbfile in args:
         if not os.path.exists(mbfile):
             parser.error("No such mbox file: %s" % mbfile)
+    if opts.since is not None:
+        try:
+            opts.since = parse(opts.since)
+        except ValueError, e:
+            parser.error("invalid value for '--since': %s" % e)
     try:
         store = get_store_from_options(opts)
     except StoreFromOptionsError, e:

@@ -105,8 +105,12 @@ class StormStore(object):
                    (message['From'], message.get('Subject', '""')))
             return email.message_id_hash
 
-        # the message.as_string() call must be done before scrubbing
-        email_full = EmailFull(list_name, msg_id, message.as_string())
+        #if not getattr(settings.KITTYSTORE_FULL_EMAIL):
+        #    # If it's a valid value, leave it to the "prototype" archiver
+        #    # Note: the message.as_string() call must be done before scrubbing
+        #    email_full = EmailFull(list_name, msg_id, message.as_string())
+        #    self.db.add(email_full)
+
         # Find thread id
         new_thread = False
         ref, thread_id = get_ref_and_thread_id(message, list_name, self)
@@ -161,7 +165,6 @@ class StormStore(object):
         self.db.add(thread)
 
         self.db.add(email)
-        self.db.add(email_full)
         compute_thread_order_and_depth(thread)
         for attachment in attachments:
             self.add_attachment(list_name, msg_id, *attachment)
@@ -464,6 +467,21 @@ class StormStore(object):
         date = self.db.find(Email.date,
                 Email.list_name == unicode(list_name)
                 ).order_by(Email.date)[:1]
+        if date:
+            return date.one()
+        else:
+            return None
+
+    def get_last_date(self, list_name):
+        """ Get the date of the last archived email in a list.
+
+        :param list_name: The fully qualified list name to search
+        :returns: The datetime of the last message, or None if no message have
+            been archived yet.
+        """
+        date = self.db.find(Email.date,
+                Email.list_name == unicode(list_name)
+                ).order_by(Desc(Email.date))[:1]
         if date:
             return date.one()
         else:
